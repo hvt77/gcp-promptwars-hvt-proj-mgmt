@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT Project Lifecycle Copilot — Executive Dashboard</title>
+  <meta name="description" content="End-to-end IT project lifecycle management: from RFP and opportunity tracking to project delivery, timesheets, and invoice management." />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#172032',
+              950: '#0b1120',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+
+    body {
+      background: #0b1120;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Glassmorphism cards */
+    .glass-card {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+    }
+
+    /* Tab styles */
+    .tab-btn {
+      position: relative;
+      padding: 10px 20px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #94a3b8;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.05); }
+    .tab-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.2));
+      border: 1px solid rgba(99,102,241,0.4);
+      box-shadow: 0 0 20px rgba(99,102,241,0.15);
+    }
+
+    /* KPI card gradient accents */
+    .kpi-card { position: relative; overflow: hidden; }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -20%;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      opacity: 0.15;
+      filter: blur(30px);
+    }
+    .kpi-pipeline::before { background: #6366f1; }
+    .kpi-revenue::before  { background: #10b981; }
+    .kpi-hours::before    { background: #f59e0b; }
+    .kpi-invoices::before { background: #ef4444; }
+
+    /* Health pill */
+    .pill-green  { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .pill-amber  { background: rgba(245,158,11,0.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .pill-red    { background: rgba(239,68,68,0.15);   color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .pill-won    { background: rgba(16,185,129,0.12);  color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .pill-lost   { background: rgba(239,68,68,0.12);   color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+    .pill-rfp    { background: rgba(99,102,241,0.12);  color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .pill-rfi    { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid rgba(148,163,184,0.25); }
+    .pill-prop   { background: rgba(245,158,11,0.12);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .pill-paid   { background: rgba(16,185,129,0.12);  color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .pill-issued { background: rgba(99,102,241,0.12);  color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .pill-overdue{ background: rgba(239,68,68,0.12);   color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+
+    /* Modal overlay */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-box {
+      background: #131c2e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 560px;
+      padding: 2rem;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    }
+
+    /* Form inputs */
+    .form-input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: rgba(99,102,241,0.6);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+    .form-input option { background: #131c2e; }
+    .form-label { font-size: 0.8rem; color: #94a3b8; font-weight: 500; margin-bottom: 4px; display: block; }
+
+    /* Primary button */
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.35); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-success:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.3); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .data-table th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .data-table td {
+      padding: 13px 16px;
+      font-size: 0.845rem;
+      color: #cbd5e1;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr { transition: background 0.15s; }
+    .data-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e293b;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 20px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* Pipeline stage dots */
+    .stage-pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .stage-dot {
+      width: 28px;
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+    .stage-dot.active { background: #6366f1; }
+    .stage-dot:first-child { border-radius: 4px 0 0 4px; }
+    .stage-dot:last-child  { border-radius: 0 4px 4px 0; }
+
+    /* Shimmer loading */
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .shimmer {
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+
+    /* Variance badge */
+    .variance-pos { color: #34d399; }
+    .variance-neg { color: #f87171; }
+
+    /* Animated counter */
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .count-anim { animation: countUp 0.6s ease forwards; }
+
+    /* Finance stat cards + hover tooltips */
+    .stat-card { position: relative; cursor: default; }
+    .stat-tip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 272px;
+      background: #1a2540;
+      border: 1px solid rgba(99,102,241,0.4);
+      border-radius: 12px;
+      padding: 12px 14px;
+      z-index: 200;
+      pointer-events: none;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+      transition: opacity 0.15s, visibility 0.15s;
+    }
+    .stat-tip::after {
+      content: '';
+      position: absolute;
+      top: 100%; left: 50%;
+      transform: translateX(-50%);
+      border: 7px solid transparent;
+      border-top-color: rgba(99,102,241,0.4);
+    }
+    .stat-card:hover .stat-tip { visibility: visible; opacity: 1; }
+  </style>
+</head>
+
+<body x-data="app()" x-init="init()" class="min-h-screen">
+
+<!-- ══════════════════════════════════════════ HEADER ══════════════════════════ -->
+<header class="border-b border-white/5 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-40">
+  <div class="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-white leading-tight">IT Lifecycle Copilot</h1>
+        <p class="text-xs text-slate-500">Engineering Director Dashboard</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- DB indicator -->
+      <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+           :class="useFirestore ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'">
+        <span class="w-1.5 h-1.5 rounded-full animate-pulse" :class="useFirestore ? 'bg-emerald-400' : 'bg-amber-400'"></span>
+        <span x-text="useFirestore ? 'Firestore' : 'SQLite (Local)'"></span>
+      </div>
+
+      <!-- Seed button -->
+      <button @click="seedData()" class="btn-ghost text-xs px-3 py-2">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Seed Demo Data
+      </button>
+
+      <div class="text-xs text-slate-500" x-text="currentTime"></div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════ MAIN ════════════════════════════ -->
+<main class="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
+
+  <!-- KPI CARDS -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-section">
+    <!-- Pipeline Value -->
+    <div class="glass-card kpi-card kpi-pipeline p-5">
+      <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400 mb-1">Pipeline Value</p>
+      <p class="text-2xl font-bold text-white count-anim" x-text="fmt(kpis.pipeline_value)">—</p>
+      <p class="text-xs text-slate-500 mt-1">Active opportunities</p>
+    </div>
+    <!-- Active Revenue -->
+    <div class="glass-card kpi-card kpi-revenue p-5">
+      <p class="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-1">Active Revenue</p>
+      <p class="text-2xl font-bold text-white count-anim" x-text="fmt(kpis.active_revenue)">—</p>
+      <p class="text-xs text-slate-500 mt-1">Committed project budgets</p>
+    </div>
+    <!-- Hours Logged -->
+    <div class="glass-card kpi-card kpi-hours p-5">
+      <p class="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-1">Hours Logged</p>
+      <p class="text-2xl font-bold text-white count-anim" x-text="kpis.total_hours !== undefined ? kpis.total_hours.toLocaleString() + ' h' : '—'">—</p>
+      <p class="text-xs text-slate-500 mt-1">Total billed this period</p>
+    </div>
+    <!-- Outstanding Invoices -->
+    <div class="glass-card kpi-card kpi-invoices p-5">
+      <p class="text-xs font-semibold uppercase tracking-widest text-red-400 mb-1">Outstanding</p>
+      <p class="text-2xl font-bold text-white count-anim" x-text="fmt(kpis.outstanding_invoices)">—</p>
+      <p class="text-xs text-slate-500 mt-1">Issued + overdue invoices</p>
+    </div>
+  </section>
+
+  <!-- TABS NAV -->
+  <nav class="glass-card p-1.5 flex gap-1 overflow-x-auto">
+    <template x-for="(tab, idx) in tabs" :key="idx">
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === idx }"
+        @click="activeTab = idx; loadTab(idx)"
+        :id="'tab-btn-' + idx">
+        <span x-text="tab.icon"></span>
+        <span x-text="tab.label" class="ml-1.5"></span>
+      </button>
+    </template>
+  </nav>
+
+  <!-- ══════════════ TAB 0: OPPORTUNITY PIPELINE ══════════════ -->
+  <div x-show="activeTab === 0" x-cloak>
+    <div class="grid lg:grid-cols-3 gap-6">
+
+      <!-- ADD OPPORTUNITY FORM -->
+      <div class="glass-card p-6 space-y-4">
+        <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+          <span class="text-indigo-400">＋</span> New Opportunity / RFP
+        </h2>
+        <form @submit.prevent="submitOpportunity()" class="space-y-3">
+          <div>
+            <label class="form-label">Client Name *</label>
+            <input x-model="oppForm.client_name" class="form-input" placeholder="e.g. Goldman Sachs" required />
+          </div>
+          <div>
+            <label class="form-label">Opportunity Name *</label>
+            <input x-model="oppForm.opportunity_name" class="form-input" placeholder="e.g. Data Lake Migration" required />
+          </div>
+          <div>
+            <label class="form-label">Stage</label>
+            <select x-model="oppForm.stage" class="form-input">
+              <option>RFI</option>
+              <option>RFP</option>
+              <option>Proposal</option>
+              <option>Won</option>
+              <option>Lost</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Estimated Value ($)</label>
+            <input x-model="oppForm.estimated_cost" type="number" min="0" step="1000" class="form-input" placeholder="0" />
+          </div>
+          <div>
+            <label class="form-label">Solution Summary</label>
+            <textarea x-model="oppForm.solution_summary" class="form-input" rows="3" placeholder="Architecture approach, key technologies…"></textarea>
+          </div>
+          <button type="submit" class="btn-primary w-full justify-center">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Opportunity
+          </button>
+        </form>
+      </div>
+
+      <!-- OPPORTUNITIES TABLE -->
+      <div class="glass-card p-6 lg:col-span-2 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-white">Opportunity Pipeline</h2>
+          <span class="text-xs text-slate-500" x-text="opportunities.length + ' records'"></span>
+        </div>
+
+        <!-- Stage pipeline visualization -->
+        <div class="flex items-center gap-4 mb-2">
+          <template x-for="(s, i) in ['RFI','RFP','Proposal','Won']" :key="i">
+            <div class="flex flex-col items-center gap-1 flex-1">
+              <div class="stage-dot w-full" :class="{ active: opportunities.filter(o=>o.stage===s).length > 0 }"></div>
+              <div class="flex items-center gap-1">
+                <span class="text-xs text-slate-500" x-text="s"></span>
+                <span class="text-xs font-bold text-indigo-400" x-text="opportunities.filter(o=>o.stage===s).length"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Client / Opportunity</th>
+                <th>Stage</th>
+                <th>Value</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="opportunities.length === 0">
+                <tr><td colspan="4" class="text-center text-slate-500 py-10">No opportunities yet. Add one or seed demo data.</td></tr>
+              </template>
+              <template x-for="opp in opportunities" :key="opp.id">
+                <tr>
+                  <td>
+                    <div class="font-medium text-white" x-text="opp.client_name"></div>
+                    <div class="text-xs text-slate-500 mt-0.5" x-text="opp.opportunity_name"></div>
+                  </td>
+                  <td>
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
+                      :class="{
+                        'pill-rfi':  opp.stage==='RFI',
+                        'pill-rfp':  opp.stage==='RFP',
+                        'pill-prop': opp.stage==='Proposal',
+                        'pill-won':  opp.stage==='Won',
+                        'pill-lost': opp.stage==='Lost',
+                      }"
+                      x-text="opp.stage"></span>
+                  </td>
+                  <td class="font-medium text-emerald-400" x-text="fmt(opp.estimated_cost)"></td>
+                  <td>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <!-- Edit button -->
+                      <button @click="openEditOpp(opp)" title="Edit Opportunity"
+                        class="w-7 h-7 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-400 flex items-center justify-center transition-colors text-sm">✏️</button>
+                      <!-- Contacts button -->
+                      <button @click="openContacts(opp)" title="Client Contacts"
+                        class="w-7 h-7 rounded-lg bg-slate-500/15 hover:bg-slate-500/30 text-slate-300 flex items-center justify-center transition-colors text-sm">👤</button>
+                      <!-- Promote -->
+                      <template x-if="!opp.promoted_to_project && (opp.stage==='Proposal'||opp.stage==='Won')">
+                        <button @click="promoteOpportunity(opp.id)" class="btn-success whitespace-nowrap">
+                          🚀 Promote
+                        </button>
+                      </template>
+                      <template x-if="opp.promoted_to_project">
+                        <span class="text-xs text-emerald-400 font-medium">✓ Active</span>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 1: PROJECT EXECUTION ══════════════ -->
+  <div x-show="activeTab === 1" x-cloak>
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-white">Project Delivery Health</h2>
+        <button @click="showCreateProjectModal = true" class="btn-primary">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Create Direct Project
+        </button>
+      </div>
+
+      <!-- Project Cards Grid -->
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <template x-if="projects.length === 0">
+          <div class="glass-card p-10 text-center text-slate-500 md:col-span-2 xl:col-span-3">
+            No active projects. Promote an opportunity or create a direct project.
+          </div>
+        </template>
+        <template x-for="proj in projects" :key="proj.id">
+          <div class="glass-card p-5 space-y-4 hover:border-white/15 transition-colors">
+            <!-- Header -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-white text-sm truncate" x-text="proj.project_name"></div>
+                <div class="text-xs text-slate-500 mt-0.5" x-text="proj.client_name"></div>
+              </div>
+              <span class="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full"
+                :class="{
+                  'pill-green': proj.health==='Green',
+                  'pill-amber': proj.health==='Amber',
+                  'pill-red':   proj.health==='Red',
+                }"
+                x-text="proj.health"></span>
+            </div>
+
+            <!-- Budget burn bar -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-400">Budget Burn</span>
+                <span class="font-medium" :class="(proj.total_burn/proj.baseline_budget)>0.8?'text-red-400':'text-emerald-400'"
+                  x-text="proj.baseline_budget ? Math.round((proj.total_burn/proj.baseline_budget)*100)+'%' : '0%'"></span>
+              </div>
+              <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700"
+                  :class="(proj.total_burn/proj.baseline_budget)>0.8?'bg-red-500':(proj.total_burn/proj.baseline_budget)>0.6?'bg-amber-500':'bg-emerald-500'"
+                  :style="`width:${proj.baseline_budget ? Math.min(100,(proj.total_burn/proj.baseline_budget)*100) : 0}%`"></div>
+              </div>
+              <div class="flex justify-between text-xs mt-1 text-slate-500">
+                <span x-text="proj.timesheet_burn > 0 ? 'Timesheet: ' + fmt(proj.timesheet_burn) + ' + Other: ' + fmt(proj.budget_burn) : 'Burned: ' + fmt(proj.total_burn)"></span>
+                <span x-text="'Budget: ' + fmt(proj.baseline_budget)"></span>
+              </div>
+            </div>
+
+            <!-- Schedule Variance -->
+            <div class="flex items-center gap-2 text-sm">
+              <span class="text-slate-400 text-xs">Schedule Variance</span>
+              <span class="font-semibold text-sm"
+                :class="proj.schedule_variance_days <= 0 ? 'variance-pos' : 'variance-neg'"
+                x-text="(proj.schedule_variance_days > 0 ? '+' : '') + proj.schedule_variance_days + ' days'"></span>
+            </div>
+
+            <!-- Risks -->
+            <template x-if="proj.risks">
+              <div class="bg-red-500/5 border border-red-500/15 rounded-xl p-3">
+                <p class="text-xs font-semibold text-red-400 mb-1">⚠ Risk Log</p>
+                <p class="text-xs text-slate-400 leading-relaxed" x-text="proj.risks"></p>
+              </div>
+            </template>
+
+            <!-- Scope Changes -->
+            <template x-if="proj.scope_changes">
+              <div class="bg-amber-500/5 border border-amber-500/15 rounded-xl p-3">
+                <p class="text-xs font-semibold text-amber-400 mb-1">📋 Scope Changes</p>
+                <p class="text-xs text-slate-400 leading-relaxed" x-text="proj.scope_changes"></p>
+              </div>
+            </template>
+
+            <!-- Health Update -->
+            <div class="flex items-center gap-2 pt-1 border-t border-white/5">
+              <label class="text-xs text-slate-500 shrink-0">Update health:</label>
+              <select class="form-input text-xs py-1.5 flex-1"
+                :value="proj.health"
+                @change="updateProjectHealth(proj.id, $event.target.value)">
+                <option>Green</option>
+                <option>Amber</option>
+                <option>Red</option>
+              </select>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Revenue Chart -->
+      <div class="glass-card p-6" x-show="projects.length > 0">
+        <h3 class="text-sm font-semibold text-white mb-4">Budget vs. Burn — All Projects</h3>
+        <div style="height:220px">
+          <canvas id="budgetChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 2: TIMESHEETS ══════════════ -->
+  <div x-show="activeTab === 2" x-cloak>
+    <div class="grid lg:grid-cols-3 gap-6">
+
+      <!-- TIMESHEET FORM -->
+      <div class="glass-card p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            <span class="text-amber-400">⏱</span> Log Weekly Hours
+          </h2>
+          <button @click="openEmployeeModal()" class="btn-ghost text-xs px-3 py-2">👥 Team Directory</button>
+        </div>
+        <form @submit.prevent="submitTimesheet()" class="space-y-3">
+          <div>
+            <label class="form-label">Resource Name *</label>
+            <select x-model="tsForm.employee_id" class="form-input" required
+              @change="onEmployeeSelect($event.target.value)">
+              <option value="">— Select Employee —</option>
+              <template x-for="e in employees" :key="e.id">
+                <option :value="e.id" x-text="e.name + ' (' + e.role + ')'"></option>
+              </template>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Project *</label>
+            <select x-model="tsForm.project_id" class="form-input" required>
+              <option value="">— Select Project —</option>
+              <template x-for="p in projects" :key="p.id">
+                <option :value="p.id" x-text="p.project_name"></option>
+              </template>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Week Ending Date *</label>
+            <input x-model="tsForm.week_ending" type="date" class="form-input" required />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="form-label">Hours Logged</label>
+              <input x-model="tsForm.hours_logged" type="number" min="0" max="80" step="0.5" class="form-input" placeholder="40" />
+            </div>
+            <div>
+              <label class="form-label">Billable Rate ($/hr)</label>
+              <input x-model="tsForm.billable_rate" type="number" min="0" step="5" class="form-input" placeholder="150" />
+            </div>
+          </div>
+          <p class="text-xs text-slate-500" x-show="tsForm.employee_id && tsForm.billable_rate">Rate auto-filled from employee profile — override if needed.</p>
+          <div class="glass-card p-3 rounded-xl text-xs text-slate-400" x-show="tsForm.hours_logged && tsForm.billable_rate">
+            Billable Amount:
+            <span class="text-emerald-400 font-semibold" x-text="'$' + (tsForm.hours_logged * tsForm.billable_rate).toLocaleString()"></span>
+          </div>
+          <button type="submit" class="btn-primary w-full justify-center">Submit Timesheet</button>
+        </form>
+      </div>
+
+      <!-- TIMESHEET LOG -->
+      <div class="glass-card p-6 lg:col-span-2 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-white">Timesheet Log</h2>
+          <span class="text-xs text-slate-500" x-text="timesheets.length + ' entries'"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Project</th>
+                <th>Week Ending</th>
+                <th>Hours</th>
+                <th>Rate</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="timesheets.length === 0">
+                <tr><td colspan="6" class="text-center text-slate-500 py-10">No timesheet entries yet.</td></tr>
+              </template>
+              <template x-for="ts in timesheets" :key="ts.id">
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs font-bold text-indigo-400"
+                        x-text="ts.resource_name.charAt(0)"></div>
+                      <span x-text="ts.resource_name"></span>
+                    </div>
+                  </td>
+                  <td class="text-slate-400 text-xs" x-text="projectName(ts.project_id)"></td>
+                  <td class="text-slate-400 font-mono text-xs" x-text="ts.week_ending"></td>
+                  <td class="font-medium text-amber-400" x-text="ts.hours_logged + ' h'"></td>
+                  <td class="text-slate-400 text-xs" x-text="'$' + ts.billable_rate + '/h'"></td>
+                  <td class="font-semibold text-emerald-400" x-text="'$' + (ts.hours_logged * ts.billable_rate).toLocaleString()"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Total summary row -->
+        <div class="flex items-center justify-between border-t border-white/5 pt-3 text-sm" x-show="timesheets.length > 0">
+          <span class="text-slate-400">Total Billable Value</span>
+          <span class="text-emerald-400 font-bold text-lg"
+            x-text="'$' + timesheets.reduce((s,t) => s + t.hours_logged*t.billable_rate, 0).toLocaleString()"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB 3: FINANCIALS / INVOICES ══════════════ -->
+  <div x-show="activeTab === 3" x-cloak>
+    <div class="space-y-6">
+
+      <!-- ── FINANCE METRICS PANEL ── -->
+      <div class="glass-card p-6 space-y-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-white">📊 Financial Metrics</h2>
+          <span class="text-xs text-slate-500">Hover any metric for definition &amp; formula</span>
+        </div>
+
+        <!-- Assumptions input strip -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 rounded-xl" style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15)">
+          <div>
+            <label class="form-label">Overhead / Period ($)</label>
+            <input x-model.number="fin.overhead" type="number" min="0" step="1000" class="form-input" placeholder="e.g. 50000" />
+          </div>
+          <div>
+            <label class="form-label">Subcontractor Costs ($)</label>
+            <input x-model.number="fin.subcontractor" type="number" min="0" step="1000" class="form-input" placeholder="e.g. 20000" />
+          </div>
+          <div>
+            <label class="form-label">Pass-through Costs ($)</label>
+            <input x-model.number="fin.passthrough" type="number" min="0" step="1000" class="form-input" placeholder="e.g. 15000" />
+          </div>
+          <div>
+            <label class="form-label">Avail. Hrs / Head / Wk</label>
+            <input x-model.number="fin.hoursPerHead" type="number" min="1" max="60" step="1" class="form-input" placeholder="40" />
+          </div>
+        </div>
+
+        <!-- Metrics grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3" x-data="{}">
+
+          <!-- NSR -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Net Service Revenue (NSR)</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Total revenue from services delivered, excluding pass-through costs. The primary top-line measure for a services firm.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">NSR = Total Invoiced</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">NSR</p>
+            <p class="text-xl font-bold text-white mt-1" x-text="fmt(finStats().nsr)"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Net Service Revenue</p>
+          </div>
+
+          <!-- GSR -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Gross Service Revenue (GSR)</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Total billings including pass-through costs (hardware, licences, travel) recharged to clients. Larger than NSR.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">GSR = NSR + Pass-throughs</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">GSR</p>
+            <p class="text-xl font-bold text-white mt-1" x-text="fmt(finStats().gsr)"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Gross Service Revenue</p>
+          </div>
+
+          <!-- ESR -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Effective Service Revenue (ESR)</p>
+              <p class="text-xs text-slate-400 leading-relaxed">NSR after deducting subcontractor costs. Represents revenue earned by your own staff — the base for margin calculations.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">ESR = NSR - Subcontractor Costs</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">ESR</p>
+            <p class="text-xl font-bold text-white mt-1" x-text="fmt(finStats().esr)"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Effective Service Revenue</p>
+          </div>
+
+          <!-- Gross Margin % -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Gross Margin %</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Percentage of NSR remaining after direct delivery costs (timesheet burn). Shows how efficiently you deliver services.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">(NSR - Delivery Cost) / NSR</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Gross Margin</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().grossMarginPct >= 40 ? 'text-emerald-400' : finStats().grossMarginPct >= 20 ? 'text-amber-400' : 'text-red-400'"
+              x-text="finStats().nsr ? finStats().grossMarginPct + '%' : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">After delivery costs</p>
+          </div>
+
+          <!-- Contribution Margin % -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Contribution Margin %</p>
+              <p class="text-xs text-slate-400 leading-relaxed">ESR remaining after all variable costs (delivery + subcontractors). Shows how much each dollar of own-staff revenue contributes to covering fixed costs.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">(ESR - Delivery Cost) / ESR</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Contribution Margin</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().contribMarginPct >= 35 ? 'text-emerald-400' : finStats().contribMarginPct >= 15 ? 'text-amber-400' : 'text-red-400'"
+              x-text="finStats().esr ? finStats().contribMarginPct + '%' : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">After variable costs</p>
+          </div>
+
+          <!-- EBITDA -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">EBITDA</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Earnings Before Interest, Tax, Depreciation &amp; Amortisation. Proxy for operating cash generation. Enter overhead above to activate.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">ESR - Delivery Cost - Overhead</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">EBITDA</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().ebitda >= 0 ? 'text-emerald-400' : 'text-red-400'"
+              x-text="finStats().esr ? fmt(finStats().ebitda) : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Operating earnings proxy</p>
+          </div>
+
+          <!-- EBITDA Margin % -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">EBITDA Margin %</p>
+              <p class="text-xs text-slate-400 leading-relaxed">EBITDA as a percentage of ESR. Industry benchmark for IT services firms is 15–25%. Below 10% signals cost pressure.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">EBITDA / ESR × 100</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">EBITDA Margin</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().ebitdaMarginPct >= 15 ? 'text-emerald-400' : finStats().ebitdaMarginPct >= 5 ? 'text-amber-400' : 'text-red-400'"
+              x-text="finStats().esr ? finStats().ebitdaMarginPct + '%' : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">% of ESR</p>
+          </div>
+
+          <!-- Revenue per Head -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Revenue per Head</p>
+              <p class="text-xs text-slate-400 leading-relaxed">NSR divided by total headcount. Key productivity metric — IT services firms typically target $150k–$300k per head annually.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">NSR / Headcount</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Rev / Head</p>
+            <p class="text-xl font-bold text-white mt-1" x-text="finStats().revPerHead ? fmt(finStats().revPerHead) : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5" x-text="employees.length + ' employees'"></p>
+          </div>
+
+          <!-- Utilisation Rate -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Utilisation Rate</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Billable hours logged as a % of total available hours (headcount × hrs/wk × 4 weeks). Target 75–85% for healthy delivery teams.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">Billable Hrs / (Heads × Hrs/Wk × 4)</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Utilisation</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().utilisationPct >= 75 ? 'text-emerald-400' : finStats().utilisationPct >= 55 ? 'text-amber-400' : 'text-red-400'"
+              x-text="finStats().utilisationPct ? finStats().utilisationPct + '%' : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Billable vs available</p>
+          </div>
+
+          <!-- Cost per Billable Hour -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Cost per Billable Hour</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Average delivery cost incurred per hour billed. Compare against average billing rate to gauge per-hour profitability.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">Total Delivery Cost / Total Hours</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Cost / Hr</p>
+            <p class="text-xl font-bold text-white mt-1" x-text="finStats().costPerHour ? '$' + finStats().costPerHour : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Avg delivery cost/hr</p>
+          </div>
+
+          <!-- DSO -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Days Sales Outstanding (DSO)</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Average days to collect payment. Lower is better — above 60 days signals cash flow risk. Target under 45 days.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">(Outstanding / NSR) × 30</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">DSO</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().dso <= 45 ? 'text-emerald-400' : finStats().dso <= 60 ? 'text-amber-400' : 'text-red-400'"
+              x-text="finStats().nsr ? finStats().dso + ' days' : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Avg collection time</p>
+          </div>
+
+          <!-- Win Rate -->
+          <div class="stat-card glass-card p-4">
+            <div class="stat-tip">
+              <p class="text-xs font-bold text-indigo-300 mb-1">Win Rate</p>
+              <p class="text-xs text-slate-400 leading-relaxed">Percentage of closed opportunities that were won. IT services benchmark is 25–40%. Low win rate signals pricing or proposal quality issues.</p>
+              <p class="text-xs text-indigo-400 mt-2 font-mono">Won / (Won + Lost) × 100</p>
+            </div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Win Rate</p>
+            <p class="text-xl font-bold mt-1"
+              :class="finStats().winRatePct >= 35 ? 'text-emerald-400' : finStats().winRatePct >= 20 ? 'text-amber-400' : 'text-red-400'"
+              x-text="finStats().winRatePct !== null ? finStats().winRatePct + '%' : '—'"></p>
+            <p class="text-xs text-slate-500 mt-0.5">Closed opp success rate</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── INVOICE SECTION ── -->
+      <div class="grid lg:grid-cols-3 gap-6">
+
+        <!-- ADD INVOICE FORM -->
+        <div class="glass-card p-6 space-y-4">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            <span class="text-emerald-400">🧾</span> Record Invoice
+          </h2>
+          <form @submit.prevent="submitInvoice()" class="space-y-3">
+            <div>
+              <label class="form-label">Project *</label>
+              <select x-model="invForm.project_id" class="form-input" required>
+                <option value="">— Select Project —</option>
+                <template x-for="p in projects" :key="p.id">
+                  <option :value="p.id" x-text="p.project_name"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Invoice Number</label>
+              <input x-model="invForm.invoice_number" class="form-input" placeholder="INV-2026-001" />
+            </div>
+            <div>
+              <label class="form-label">Amount ($)</label>
+              <input x-model="invForm.invoice_amount" type="number" min="0" step="100" class="form-input" placeholder="0" required />
+            </div>
+            <div>
+              <label class="form-label">Issue Date</label>
+              <input x-model="invForm.issue_date" type="date" class="form-input" />
+            </div>
+            <div>
+              <label class="form-label">Status</label>
+              <select x-model="invForm.status" class="form-input">
+                <option>Issued</option>
+                <option>Paid</option>
+                <option>Overdue</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary w-full justify-center">Record Invoice</button>
+          </form>
+        </div>
+
+        <!-- INVOICE TABLE + CHART -->
+        <div class="lg:col-span-2 space-y-4">
+
+          <!-- Summary strip -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="glass-card p-4">
+              <p class="text-xs text-slate-500">Total Invoiced</p>
+              <p class="text-xl font-bold text-white mt-1" x-text="fmt(invoices.reduce((s,i)=>s+i.invoice_amount,0))"></p>
+            </div>
+            <div class="glass-card p-4">
+              <p class="text-xs text-slate-500">Collected (Paid)</p>
+              <p class="text-xl font-bold text-emerald-400 mt-1"
+                x-text="fmt(invoices.filter(i=>i.status==='Paid').reduce((s,i)=>s+i.invoice_amount,0))"></p>
+            </div>
+            <div class="glass-card p-4">
+              <p class="text-xs text-slate-500">Gross Margin %</p>
+              <p class="text-xl font-bold text-indigo-400 mt-1" x-text="finStats().nsr ? finStats().grossMarginPct + '%' : '—'"></p>
+            </div>
+          </div>
+
+          <!-- Invoice Table -->
+          <div class="glass-card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-semibold text-white">Invoice Register</h2>
+              <span class="text-xs text-slate-500" x-text="invoices.length + ' invoices'"></span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Project</th>
+                    <th>Amount</th>
+                    <th>Issue Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-if="invoices.length === 0">
+                    <tr><td colspan="5" class="text-center text-slate-500 py-10">No invoices recorded yet.</td></tr>
+                  </template>
+                  <template x-for="inv in invoices" :key="inv.id">
+                    <tr>
+                      <td class="font-mono text-xs font-semibold text-indigo-400" x-text="inv.invoice_number || '—'"></td>
+                      <td class="text-slate-400 text-xs" x-text="projectName(inv.project_id)"></td>
+                      <td class="font-semibold text-white" x-text="fmt(inv.invoice_amount)"></td>
+                      <td class="text-slate-400 font-mono text-xs" x-text="inv.issue_date"></td>
+                      <td>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          :class="{
+                            'pill-paid':   inv.status==='Paid',
+                            'pill-issued': inv.status==='Issued',
+                            'pill-overdue':inv.status==='Overdue',
+                          }"
+                          x-text="inv.status"></span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Invoice Status Chart -->
+          <div class="glass-card p-6" x-show="invoices.length > 0">
+            <h3 class="text-sm font-semibold text-white mb-4">Revenue by Status</h3>
+            <div style="height:200px;">
+              <canvas id="invoiceChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════ EDIT OPPORTUNITY MODAL ══════════════════════ -->
+<div x-show="showEditOppModal" x-cloak class="modal-overlay" @click.self="showEditOppModal = false">
+  <div class="modal-box" style="max-width:640px" @click.stop>
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-base font-bold text-white">✏️ Edit Opportunity</h3>
+      <button @click="showEditOppModal = false" class="text-slate-500 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form @submit.prevent="saveEditOpp()" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Client Name *</label>
+          <input x-model="editOppForm.client_name" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Opportunity Name *</label>
+          <input x-model="editOppForm.opportunity_name" class="form-input" required />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Stage</label>
+          <select x-model="editOppForm.stage" class="form-input">
+            <option>RFI</option><option>RFP</option><option>Proposal</option><option>Won</option><option>Lost</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Estimated Value ($)</label>
+          <input x-model="editOppForm.estimated_cost" type="number" min="0" step="1000" class="form-input" />
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Solution Summary</label>
+        <textarea x-model="editOppForm.solution_summary" class="form-input" rows="2"></textarea>
+      </div>
+      <div>
+        <label class="form-label">Team Members</label>
+        <div class="grid grid-cols-2 gap-2 mt-1 max-h-36 overflow-y-auto">
+          <template x-for="emp in employees" :key="emp.id">
+            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <input type="checkbox" :value="emp.id"
+                :checked="editOppForm.team_member_ids.includes(emp.id)"
+                @change="toggleTeamMember(emp.id)"
+                class="rounded border-white/20 bg-white/5 text-indigo-500" />
+              <span x-text="emp.name"></span>
+              <span class="text-xs text-slate-500" x-text="emp.role"></span>
+            </label>
+          </template>
+          <template x-if="employees.length === 0">
+            <p class="text-xs text-slate-500 col-span-2">No employees yet. Add via Team Directory.</p>
+          </template>
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="btn-primary flex-1 justify-center">Save Changes</button>
+        <button type="button" @click="showEditOppModal = false" class="btn-ghost">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ CONTACTS MODAL ════════════════════════════════ -->
+<div x-show="showContactsModal" x-cloak class="modal-overlay" @click.self="showContactsModal = false">
+  <div class="modal-box" style="max-width:600px" @click.stop>
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h3 class="text-base font-bold text-white">👤 Client Contacts</h3>
+        <p class="text-xs text-slate-500 mt-0.5" x-text="contactsClient"></p>
+      </div>
+      <button @click="showContactsModal = false" class="text-slate-500 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <!-- Contacts list -->
+    <div class="space-y-2 max-h-52 overflow-y-auto mb-4">
+      <template x-if="contacts.length === 0">
+        <p class="text-sm text-slate-500 text-center py-4">No contacts yet for this client.</p>
+      </template>
+      <template x-for="c in contacts" :key="c.id">
+        <div class="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
+          <div>
+            <div class="text-sm font-medium text-white" x-text="c.contact_name"></div>
+            <div class="text-xs text-slate-500" x-text="c.role"></div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-indigo-400" x-text="c.email"></div>
+            <div class="text-xs text-slate-500" x-text="c.phone"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+    <!-- Add contact form -->
+    <div class="border-t border-white/8 pt-4">
+      <p class="text-xs font-semibold text-slate-400 mb-3">Add Contact</p>
+      <form @submit.prevent="submitContact()" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Name *</label>
+            <input x-model="contactForm.contact_name" class="form-input" placeholder="Jane Smith" required />
+          </div>
+          <div>
+            <label class="form-label">Role</label>
+            <input x-model="contactForm.role" class="form-input" placeholder="CTO" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Email</label>
+            <input x-model="contactForm.email" type="email" class="form-input" placeholder="jane@client.com" />
+          </div>
+          <div>
+            <label class="form-label">Phone</label>
+            <input x-model="contactForm.phone" class="form-input" placeholder="+1 555 0100" />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary w-full justify-center">Add Contact</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ EMPLOYEE MODAL ════════════════════════════════ -->
+<div x-show="showEmployeeModal" x-cloak class="modal-overlay" @click.self="showEmployeeModal = false">
+  <div class="modal-box" style="max-width:600px" @click.stop>
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-base font-bold text-white">👥 Team Directory</h3>
+      <button @click="showEmployeeModal = false" class="text-slate-500 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <!-- Employee list -->
+    <div class="space-y-2 max-h-52 overflow-y-auto mb-4">
+      <template x-if="employees.length === 0">
+        <p class="text-sm text-slate-500 text-center py-4">No employees yet.</p>
+      </template>
+      <template x-for="emp in employees" :key="emp.id">
+        <div class="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-400"
+              x-text="emp.name.charAt(0)"></div>
+            <div>
+              <div class="text-sm font-medium text-white" x-text="emp.name"></div>
+              <div class="text-xs text-slate-500" x-text="emp.role + ' · ' + emp.department"></div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-semibold text-emerald-400" x-text="'$' + emp.default_billable_rate + '/h'"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+    <!-- Add employee form -->
+    <div class="border-t border-white/8 pt-4">
+      <p class="text-xs font-semibold text-slate-400 mb-3">Add Employee</p>
+      <form @submit.prevent="submitEmployee()" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Name *</label>
+            <input x-model="employeeForm.name" class="form-input" placeholder="Alice Chen" required />
+          </div>
+          <div>
+            <label class="form-label">Role</label>
+            <input x-model="employeeForm.role" class="form-input" placeholder="Cloud Architect" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Department</label>
+            <input x-model="employeeForm.department" class="form-input" placeholder="Delivery" />
+          </div>
+          <div>
+            <label class="form-label">Default Rate ($/hr)</label>
+            <input x-model="employeeForm.default_billable_rate" type="number" min="0" step="5" class="form-input" placeholder="150" />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary w-full justify-center">Add Employee</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ CREATE DIRECT PROJECT MODAL ══════════════════ -->
+<div x-show="showCreateProjectModal" x-cloak class="modal-overlay" @click.self="showCreateProjectModal = false">
+  <div class="modal-box" @click.stop>
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-base font-bold text-white">Create Direct Project</h3>
+      <button @click="showCreateProjectModal = false" class="text-slate-500 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form @submit.prevent="submitDirectProject()" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Client Name *</label>
+          <input x-model="projForm.client_name" class="form-input" placeholder="e.g. Barclays" required />
+        </div>
+        <div>
+          <label class="form-label">Project Name *</label>
+          <input x-model="projForm.project_name" class="form-input" placeholder="e.g. API Modernisation" required />
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Baseline Budget ($) *</label>
+        <input x-model="projForm.baseline_budget" type="number" min="0" step="1000" class="form-input" placeholder="0" required />
+      </div>
+      <div>
+        <label class="form-label">Architecture / Scope Notes</label>
+        <textarea x-model="projForm.proposed_architecture" class="form-input" rows="3" placeholder="Brief description of the engagement scope…"></textarea>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="btn-primary flex-1 justify-center">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Create Project
+        </button>
+        <button type="button" @click="showCreateProjectModal = false" class="btn-ghost">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast">
+  <span id="toast-icon">✓</span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ══════════════════════════════ ALPINE APP ══════════════════════════════════ -->
+<script>
+function app() {
+  return {
+    // ── State ──────────────────────────────────────────────────────────────────
+    activeTab: 0,
+    useFirestore: {{ 'true' if use_firestore else 'false' }},
+    tabs: [
+      { label: 'Opportunity Pipeline', icon: '🎯' },
+      { label: 'Project Execution',    icon: '🚀' },
+      { label: 'Timesheets',           icon: '⏱' },
+      { label: 'Financials',           icon: '💰' },
+    ],
+    currentTime: '',
+    kpis: {},
+    opportunities: [],
+    projects: [],
+    timesheets: [],
+    invoices: [],
+    employees: [],
+    contacts: [],
+    showCreateProjectModal: false,
+    showEditOppModal: false,
+    showContactsModal: false,
+    showEmployeeModal: false,
+    contactsClient: '',
+
+    // Forms
+    oppForm:      { client_name:'', opportunity_name:'', stage:'RFI', estimated_cost:'', solution_summary:'' },
+    editOppForm:  { id:'', client_name:'', opportunity_name:'', stage:'RFI', estimated_cost:'', solution_summary:'', team_member_ids:[] },
+    tsForm:       { employee_id:'', resource_name:'', project_id:'', week_ending:'', hours_logged:'', billable_rate:'' },
+    invForm:      { project_id:'', invoice_number:'', invoice_amount:'', issue_date:'', status:'Issued' },
+    projForm:     { client_name:'', project_name:'', baseline_budget:'', proposed_architecture:'' },
+    contactForm:  { contact_name:'', role:'', email:'', phone:'' },
+    employeeForm: { name:'', role:'', department:'', default_billable_rate:'' },
+
+    // Finance assumptions (period-level inputs, UI-only)
+    fin: { overhead: 0, subcontractor: 0, passthrough: 0, hoursPerHead: 40 },
+
+    budgetChart: null,
+    invoiceChart: null,
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+    async init() {
+      this.updateClock();
+      setInterval(() => this.updateClock(), 1000);
+      await this.loadAll();
+    },
+
+    updateClock() {
+      this.currentTime = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    },
+
+    async loadAll() {
+      await Promise.all([
+        this.loadOpportunities(),
+        this.loadProjects(),
+        this.loadTimesheets(),
+        this.loadInvoices(),
+        this.loadKPIs(),
+        this.loadEmployees(),
+      ]);
+    },
+
+    async loadTab(idx) {
+      if (idx === 1) { await this.loadProjects(); this.$nextTick(() => this.drawBudgetChart()); }
+      if (idx === 2) { await this.loadTimesheets(); await this.loadProjects(); await this.loadEmployees(); }
+      if (idx === 3) { await this.loadInvoices(); this.$nextTick(() => this.drawInvoiceChart()); }
+    },
+
+    // ── API helpers ────────────────────────────────────────────────────────────
+    async api(url, method='GET', body=null) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(url, opts);
+      return res.json();
+    },
+
+    // ── Data loaders ───────────────────────────────────────────────────────────
+    async loadKPIs()          { this.kpis          = await this.api('/api/kpis'); },
+    async loadOpportunities() { this.opportunities = await this.api('/api/opportunities'); },
+    async loadProjects()      { this.projects      = await this.api('/api/projects'); },
+    async loadTimesheets()    { this.timesheets    = await this.api('/api/timesheets'); },
+    async loadInvoices()      { this.invoices      = await this.api('/api/invoices'); },
+    async loadEmployees()     { this.employees     = await this.api('/api/employees'); },
+
+    // ── Seed ───────────────────────────────────────────────────────────────────
+    async seedData() {
+      const res = await this.api('/api/seed');
+      if (res.status === 'success') {
+        this.toast('✅ Demo data seeded! Refreshing…', 'success');
+        await this.loadAll();
+      } else {
+        this.toast('❌ Seed failed: ' + (res.message || 'unknown error'), 'error');
+      }
+    },
+
+    // ── Submit Opportunity ─────────────────────────────────────────────────────
+    async submitOpportunity() {
+      const opp = await this.api('/api/opportunities', 'POST', this.oppForm);
+      this.opportunities.unshift(opp);
+      this.oppForm = { client_name:'', opportunity_name:'', stage:'RFI', estimated_cost:'', solution_summary:'' };
+      await this.loadKPIs();
+      this.toast('✅ Opportunity added!');
+    },
+
+    // ── Edit Opportunity ───────────────────────────────────────────────────────
+    openEditOpp(opp) {
+      this.editOppForm = {
+        id: opp.id,
+        client_name: opp.client_name,
+        opportunity_name: opp.opportunity_name,
+        stage: opp.stage,
+        estimated_cost: opp.estimated_cost,
+        solution_summary: opp.solution_summary || '',
+        team_member_ids: Array.isArray(opp.team_member_ids) ? [...opp.team_member_ids] : [],
+      };
+      this.showEditOppModal = true;
+    },
+
+    toggleTeamMember(empId) {
+      const idx = this.editOppForm.team_member_ids.indexOf(empId);
+      if (idx === -1) this.editOppForm.team_member_ids.push(empId);
+      else this.editOppForm.team_member_ids.splice(idx, 1);
+    },
+
+    async saveEditOpp() {
+      const { id, ...payload } = this.editOppForm;
+      await this.api(`/api/opportunities/${id}`, 'PATCH', payload);
+      await this.loadOpportunities();
+      await this.loadKPIs();
+      this.showEditOppModal = false;
+      this.toast('✅ Opportunity updated!');
+    },
+
+    // ── Contacts ───────────────────────────────────────────────────────────────
+    async openContacts(opp) {
+      this.contactsClient = opp.client_name;
+      this.contactForm = { contact_name:'', role:'', email:'', phone:'' };
+      this.contacts = await this.api(`/api/contacts?client=${encodeURIComponent(opp.client_name)}`);
+      this.showContactsModal = true;
+    },
+
+    async submitContact() {
+      const contact = await this.api('/api/contacts', 'POST', { ...this.contactForm, client_name: this.contactsClient });
+      this.contacts.unshift(contact);
+      this.contactForm = { contact_name:'', role:'', email:'', phone:'' };
+      this.toast('✅ Contact added!');
+    },
+
+    // ── Employees ──────────────────────────────────────────────────────────────
+    openEmployeeModal() {
+      this.employeeForm = { name:'', role:'', department:'', default_billable_rate:'' };
+      this.showEmployeeModal = true;
+    },
+
+    onEmployeeSelect(empId) {
+      const emp = this.employees.find(e => e.id === empId);
+      if (emp) {
+        this.tsForm.resource_name = emp.name;
+        this.tsForm.billable_rate = emp.default_billable_rate;
+      }
+    },
+
+    async submitEmployee() {
+      const emp = await this.api('/api/employees', 'POST', this.employeeForm);
+      this.employees.push(emp);
+      this.employees.sort((a,b) => a.name.localeCompare(b.name));
+      this.employeeForm = { name:'', role:'', department:'', default_billable_rate:'' };
+      this.toast('✅ Employee added!');
+    },
+
+    // ── Promote to Project ─────────────────────────────────────────────────────
+    async promoteOpportunity(id) {
+      const res = await this.api(`/api/opportunities/${id}/promote`, 'POST');
+      if (res.status === 'success') {
+        this.toast('🚀 Opportunity promoted to active project!');
+        await this.loadOpportunities();
+        await this.loadProjects();
+        await this.loadKPIs();
+        // Navigate to Execution tab
+        this.activeTab = 1;
+        this.$nextTick(() => this.drawBudgetChart());
+      } else {
+        this.toast('❌ ' + res.message, 'error');
+      }
+    },
+
+    // ── Submit Direct Project ──────────────────────────────────────────────────
+    async submitDirectProject() {
+      const proj = await this.api('/api/projects', 'POST', this.projForm);
+      this.projects.unshift(proj);
+      this.showCreateProjectModal = false;
+      this.projForm = { client_name:'', project_name:'', baseline_budget:'', proposed_architecture:'' };
+      await this.loadKPIs();
+      this.$nextTick(() => this.drawBudgetChart());
+      this.toast('✅ Project created!');
+    },
+
+    // ── Update Project Health ──────────────────────────────────────────────────
+    async updateProjectHealth(id, health) {
+      await this.api(`/api/projects/${id}`, 'PATCH', { health });
+      const proj = this.projects.find(p => p.id === id);
+      if (proj) proj.health = health;
+      this.toast('✅ Health status updated');
+    },
+
+    // ── Submit Timesheet ───────────────────────────────────────────────────────
+    async submitTimesheet() {
+      const ts = await this.api('/api/timesheets', 'POST', {
+        project_id: this.tsForm.project_id,
+        resource_name: this.tsForm.resource_name,
+        week_ending: this.tsForm.week_ending,
+        hours_logged: this.tsForm.hours_logged,
+        billable_rate: this.tsForm.billable_rate,
+      });
+      this.timesheets.unshift(ts);
+      this.tsForm = { employee_id:'', resource_name:'', project_id:'', week_ending:'', hours_logged:'', billable_rate:'' };
+      await this.loadKPIs();
+      this.toast('✅ Timesheet logged!');
+    },
+
+    // ── Submit Invoice ─────────────────────────────────────────────────────────
+    async submitInvoice() {
+      const inv = await this.api('/api/invoices', 'POST', this.invForm);
+      this.invoices.unshift(inv);
+      this.invForm = { project_id:'', invoice_number:'', invoice_amount:'', issue_date:'', status:'Issued' };
+      await this.loadKPIs();
+      this.$nextTick(() => this.drawInvoiceChart());
+      this.toast('✅ Invoice recorded!');
+    },
+
+    // ── Charts ─────────────────────────────────────────────────────────────────
+    drawBudgetChart() {
+      const canvas = document.getElementById('budgetChart');
+      if (!canvas || this.projects.length === 0) return;
+      if (this.budgetChart) this.budgetChart.destroy();
+      const labels = this.projects.map(p => p.project_name.split(' - ')[0] || p.project_name);
+      this.budgetChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Baseline Budget',
+              data: this.projects.map(p => p.baseline_budget),
+              backgroundColor: 'rgba(99,102,241,0.25)',
+              borderColor: 'rgba(99,102,241,0.8)',
+              borderWidth: 1.5,
+              borderRadius: 6,
+            },
+            {
+              label: 'Total Burn',
+              data: this.projects.map(p => p.total_burn || p.budget_burn),
+              backgroundColor: 'rgba(16,185,129,0.25)',
+              borderColor: 'rgba(16,185,129,0.8)',
+              borderWidth: 1.5,
+              borderRadius: 6,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: {
+              ticks: {
+                color: '#64748b', font: { size: 11 },
+                callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
+              },
+              grid: { color: 'rgba(255,255,255,0.04)' }
+            }
+          }
+        }
+      });
+    },
+
+    drawInvoiceChart() {
+      const canvas = document.getElementById('invoiceChart');
+      if (!canvas || this.invoices.length === 0) return;
+      if (this.invoiceChart) this.invoiceChart.destroy();
+      const paid    = this.invoices.filter(i=>i.status==='Paid').reduce((s,i)=>s+i.invoice_amount,0);
+      const issued  = this.invoices.filter(i=>i.status==='Issued').reduce((s,i)=>s+i.invoice_amount,0);
+      const overdue = this.invoices.filter(i=>i.status==='Overdue').reduce((s,i)=>s+i.invoice_amount,0);
+      this.invoiceChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Paid', 'Issued', 'Overdue'],
+          datasets: [{
+            data: [paid, issued, overdue],
+            backgroundColor: ['rgba(16,185,129,0.7)', 'rgba(99,102,241,0.7)', 'rgba(239,68,68,0.7)'],
+            borderColor:     ['rgba(16,185,129,0.9)', 'rgba(99,102,241,0.9)', 'rgba(239,68,68,0.9)'],
+            borderWidth: 1.5,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, padding: 16 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` $${ctx.parsed.toLocaleString()}`
+              }
+            }
+          }
+        }
+      });
+    },
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    fmt(val) {
+      if (val === undefined || val === null) return '—';
+      return '$' + Number(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    },
+
+    projectName(id) {
+      const p = this.projects.find(p => p.id === id);
+      return p ? p.project_name : id;
+    },
+
+    grossMargin() {
+      const total = this.invoices.reduce((s,i) => s+i.invoice_amount, 0);
+      const costs = this.timesheets.reduce((s,t) => s+(t.hours_logged*t.billable_rate), 0);
+      if (!total) return '—';
+      return Math.round(((total - costs) / total) * 100) + '%';
+    },
+
+    finStats() {
+      const nsr          = this.invoices.reduce((s,i) => s + i.invoice_amount, 0);
+      const gsr          = nsr + (Number(this.fin.passthrough) || 0);
+      const sub          = Number(this.fin.subcontractor) || 0;
+      const esr          = nsr - sub;
+      const deliveryCost = this.timesheets.reduce((s,t) => s + t.hours_logged * t.billable_rate, 0);
+      const overhead     = Number(this.fin.overhead) || 0;
+      const totalHours   = this.timesheets.reduce((s,t) => s + t.hours_logged, 0);
+      const headcount    = this.employees.length || 1;
+      const hpw          = Number(this.fin.hoursPerHead) || 40;
+      const outstanding  = this.invoices.filter(i => i.status === 'Issued' || i.status === 'Overdue')
+                                        .reduce((s,i) => s + i.invoice_amount, 0);
+      const won  = this.opportunities.filter(o => o.stage === 'Won').length;
+      const lost = this.opportunities.filter(o => o.stage === 'Lost').length;
+
+      const pct = (num, den) => den ? Math.round((num / den) * 100) : 0;
+
+      return {
+        nsr,
+        gsr,
+        esr,
+        grossMarginPct:   pct(nsr - deliveryCost, nsr),
+        contribMarginPct: pct(esr - deliveryCost, esr),
+        ebitda:           Math.round(esr - deliveryCost - overhead),
+        ebitdaMarginPct:  pct(esr - deliveryCost - overhead, esr),
+        revPerHead:       headcount > 0 ? Math.round(nsr / headcount) : 0,
+        utilisationPct:   pct(totalHours, headcount * hpw * 4),
+        costPerHour:      totalHours > 0 ? Math.round(deliveryCost / totalHours) : 0,
+        dso:              nsr > 0 ? Math.round((outstanding / nsr) * 30) : 0,
+        winRatePct:       (won + lost) > 0 ? pct(won, won + lost) : null,
+      };
+    },
+
+    toast(msg, type='success') {
+      const el  = document.getElementById('toast');
+      const txt = document.getElementById('toast-msg');
+      const ico = document.getElementById('toast-icon');
+      txt.textContent = msg;
+      ico.textContent = type === 'error' ? '⚠' : '✓';
+      el.style.borderColor = type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)';
+      el.classList.add('show');
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    },
+  };
+}
+</script>
+</body>
+</html>

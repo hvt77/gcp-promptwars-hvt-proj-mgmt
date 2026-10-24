@@ -1,0 +1,8 @@
+.gcloudignore
+.git
+.gitignore
+.env
+*.sqlite
+__pycache__/
+*.pyc
+specs/
